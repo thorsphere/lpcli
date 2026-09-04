@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"reflect"
 	"strings"
 
 	"github.com/thorsphere/tserr"
@@ -21,48 +20,39 @@ const (
 
 type Prompter struct {
 	Name   string // Name of the cli tool
-	In     io.Reader
+	in     io.Reader
 	Out    io.Writer // usually os.Stderr for interactive prompts
 	reader *bufio.Reader
-	src    io.Reader
 }
 
 func NewPrompter(name string) *Prompter {
 	return &Prompter{
 		Name: name,
-		In:   os.Stdin,
+		in:   os.Stdin,
 		Out:  os.Stderr,
-		src:  os.Stdin, // keep src in sync with In; reader is created lazily by getReader()
 	}
 }
 
 func (p *Prompter) getReader() *bufio.Reader {
-	in := p.In
+	in := p.in
 	if in == nil {
 		in = os.Stdin
 	}
-
-	if p.reader == nil || !sameReader(p.src, in) {
+	if p.reader == nil {
 		p.reader = bufio.NewReader(in)
-		p.src = in
 	}
-
 	return p.reader
 }
 
-// sameReader reports whether two io.Reader values refer to the same source.
-// Direct interface comparison panics when the dynamic type is uncomparable
-// (e.g. a struct containing a slice), so differing or uncomparable types are
-// conservatively reported as different, which forces a rebuild.
-func sameReader(a, b io.Reader) bool {
-	if a == nil || b == nil {
-		return a == nil && b == nil
-	}
-	ta, tb := reflect.TypeOf(a), reflect.TypeOf(b)
-	if ta != tb || !ta.Comparable() {
-		return false
-	}
-	return a == b
+func (p *Prompter) In() io.Reader { return p.in }
+
+// SetIn changes the input source and discards any buffered reader, so
+// subsequent reads come from r. Prefer this over assigning In directly once
+// the prompter has been used, since a cached reader would otherwise keep
+// reading from the previous source. Passing nil restores os.Stdin.
+func (p *Prompter) SetIn(r io.Reader) {
+	p.in = r
+	p.reader = nil
 }
 
 func (p *Prompter) Confirm(message string) error {
