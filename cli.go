@@ -34,7 +34,6 @@ func NewPrompter(name string) *Prompter {
 	}
 }
 
-// Helper to ensure reader stays in sync even if p.In was changed after construction
 func (p *Prompter) getReader() *bufio.Reader {
 	if p.reader == nil {
 		in := p.In
@@ -47,27 +46,27 @@ func (p *Prompter) getReader() *bufio.Reader {
 }
 
 func (p *Prompter) Confirm(message string) error {
-    // If the prompter is nil, return an error
-    if p == nil {
-        return tserr.NilPtr()
-    }
+	// If the prompter is nil, return an error
+	if p == nil {
+		return tserr.NilPtr()
+	}
 
-    for {
-        fmt.Fprint(p.Out, message)
-        choice, err := p.readLine()
-        if err != nil {
-            return err
-        }
+	for {
+		fmt.Fprint(p.Out, message)
+		choice, err := p.readLine()
+		if err != nil {
+			return err
+		}
 
-        switch strings.ToLower(choice) {
-        case "y", "yes", "":
-            return nil
-        case "n", "no":
-            return tserr.Aborted(p.Name)
-        default:
-            fmt.Fprintf(p.Out, "Unknown option %q. Please choose [y/n].\n", choice)
-        }
-    }
+		switch strings.ToLower(choice) {
+		case "y", "yes", "":
+			return nil
+		case "n", "no":
+			return tserr.Aborted(p.Name)
+		default:
+			fmt.Fprintf(p.Out, "Unknown option %q. Please choose [y/n].\n", choice)
+		}
+	}
 }
 
 // readLine reads a line of input, handling non-newline-terminated EOF cleanly.
