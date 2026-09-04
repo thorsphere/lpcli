@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"strings"
 
 	"github.com/thorsphere/tserr"
@@ -31,7 +32,7 @@ func NewPrompter(name string) *Prompter {
 		Name: name,
 		In:   os.Stdin,
 		Out:  os.Stderr,
-		// reader is created lazily by getReader()
+		src:  os.Stdin, // keep src in sync with In; reader is created lazily by getReader()
 	}
 }
 
@@ -41,12 +42,27 @@ func (p *Prompter) getReader() *bufio.Reader {
 		in = os.Stdin
 	}
 
-	if p.reader == nil || p.src != in {
+	if p.reader == nil || !sameReader(p.src, in) {
 		p.reader = bufio.NewReader(in)
 		p.src = in
 	}
 
 	return p.reader
+}
+
+// sameReader reports whether two io.Reader values refer to the same source.
+// Direct interface comparison panics when the dynamic type is uncomparable
+// (e.g. a struct containing a slice), so differing or uncomparable types are
+// conservatively reported as different, which forces a rebuild.
+func sameReader(a, b io.Reader) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	ta, tb := reflect.TypeOf(a), reflect.TypeOf(b)
+	if ta != tb || !ta.Comparable() {
+		return false
+	}
+	return a == b
 }
 
 func (p *Prompter) Confirm(message string) error {
