@@ -128,7 +128,7 @@ func (p *Prompter) Prompt(opts SelectOptions) (string, error) {
 	}
 
 	for {
-		fmt.Fprint(p.Out, promptMsg)
+		fmt.Fprint(p.Out(), promptMsg)
 		trimmed, err := p.readLine()
 		if err != nil {
 			return "", err
@@ -144,6 +144,6 @@ func (p *Prompter) Prompt(opts SelectOptions) (string, error) {
 			}
 		}
 
-		fmt.Fprintf(p.Out, "Unknown option %q. Please choose [%s].\n", trimmed, strings.Join(keyParts, "/"))
+		fmt.Fprintf(p.Out(), "Unknown option %q. Please choose [%s].\n", trimmed, strings.Join(keyParts, "/"))
 	}
 }

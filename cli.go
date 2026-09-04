@@ -21,7 +21,7 @@ const (
 type Prompter struct {
 	Name   string // Name of the cli tool
 	in     io.Reader
-	Out    io.Writer // usually os.Stderr for interactive prompts
+	out    io.Writer // usually os.Stderr for interactive prompts
 	reader *bufio.Reader
 }
 
@@ -29,7 +29,7 @@ func NewPrompter(name string) *Prompter {
 	return &Prompter{
 		Name: name,
 		in:   os.Stdin,
-		Out:  os.Stderr,
+		out:  os.Stderr,
 	}
 }
 
@@ -55,6 +55,17 @@ func (p *Prompter) SetIn(r io.Reader) {
 	p.reader = nil
 }
 
+func (p *Prompter) Out() io.Writer {
+	if p.out == nil {
+		return os.Stderr
+	}
+	return p.out
+}
+
+// SetOut changes the writer used for prompt output. Passing nil restores
+// os.Stderr.
+func (p *Prompter) SetOut(w io.Writer) { p.out = w }
+
 func (p *Prompter) Confirm(message string) error {
 	// If the prompter is nil, return an error
 	if p == nil {
@@ -62,7 +73,7 @@ func (p *Prompter) Confirm(message string) error {
 	}
 
 	for {
-		fmt.Fprint(p.Out, message)
+		fmt.Fprint(p.Out(), message)
 		choice, err := p.readLine()
 		if err != nil {
 			return err
@@ -74,7 +85,7 @@ func (p *Prompter) Confirm(message string) error {
 		case "n", "no":
 			return tserr.Aborted(p.Name)
 		default:
-			fmt.Fprintf(p.Out, "Unknown option %q. Please choose [y/n].\n", choice)
+			fmt.Fprintf(p.Out(), "Unknown option %q. Please choose [y/n].\n", choice)
 		}
 	}
 }
