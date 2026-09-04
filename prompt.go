@@ -4,7 +4,6 @@
 package lpcli
 
 import (
-	"bufio"
 	"fmt"
 	"strings"
 
@@ -38,26 +37,74 @@ func (c Choice) matches(input string) bool {
 	return false
 }
 
-// Prompt prompts the user to select one of the provided choices interactively.
-func (p *Prompter) Prompt(reader *bufio.Reader, opts SelectOptions) (string, error) {
+// Validate ensures options are well-formed and returns the default choice if one is configured.
+func (opts SelectOptions) Validate() (*Choice, error) {
 	if len(opts.Choices) == 0 {
-		return "", tserr.Empty("choices")
+		return nil, tserr.Empty("choices")
+	}
+
+	var defaultChoice *Choice
+	seen := make(map[string]string) // normalized input -> original choice key
+
+	for i := range opts.Choices {
+		c := &opts.Choices[i]
+		key := strings.TrimSpace(c.Key)
+		if key == "" {
+			return nil, tserr.InvalidFormat("choice key cannot be empty")
+		}
+
+		// Check multiple defaults
+		if c.IsDefault {
+			if defaultChoice != nil {
+				return nil, tserr.InvalidFormat(fmt.Sprintf("multiple default choices defined (%q and %q)", defaultChoice.Key, c.Key))
+			}
+			defaultChoice = c
+		}
+
+		// Check for duplicate key
+		normKey := strings.ToLower(key)
+		if existing, exists := seen[normKey]; exists {
+			return nil, tserr.InvalidFormat(fmt.Sprintf("duplicate choice key %q (already registered by choice %q)", key, existing))
+		}
+		seen[normKey] = key
+
+		// Check for duplicate aliases or alias colliding with another key
+		for _, alias := range c.Aliases {
+			aliasTrimmed := strings.TrimSpace(alias)
+			if aliasTrimmed == "" {
+				continue
+			}
+			normAlias := strings.ToLower(aliasTrimmed)
+			if existing, exists := seen[normAlias]; exists {
+				return nil, tserr.InvalidFormat(fmt.Sprintf("duplicate alias %q in choice %q (already registered by choice %q)", alias, key, existing))
+			}
+			seen[normAlias] = key
+		}
+	}
+
+	return defaultChoice, nil
+}
+
+// Prompt prompts the user to select one of the provided choices interactively.
+func (p *Prompter) Prompt(opts SelectOptions) (string, error) {
+	if p == nil {
+		return "", tserr.NilPtr()
+	}
+
+	defaultChoice, err := opts.Validate()
+	if err != nil {
+		return "", err
 	}
 
 	var (
-		keyParts      []string
-		legendParts   []string
-		defaultChoice *Choice
+		keyParts    []string
+		legendParts []string
 	)
 
 	for _, c := range opts.Choices {
-		key := c.Key
+		key := strings.ToLower(c.Key)
 		if c.IsDefault {
-			key = strings.ToUpper(key)
-			copyChoice := c
-			defaultChoice = &copyChoice
-		} else {
-			key = strings.ToLower(key)
+			key = strings.ToUpper(c.Key)
 		}
 		keyParts = append(keyParts, key)
 
@@ -82,12 +129,10 @@ func (p *Prompter) Prompt(reader *bufio.Reader, opts SelectOptions) (string, err
 
 	for {
 		fmt.Fprint(p.Out, promptMsg)
-		input, err := reader.ReadString('\n')
+		trimmed, err := p.readLine()
 		if err != nil {
 			return "", err
 		}
-
-		trimmed := strings.TrimSpace(input)
 
 		if trimmed == "" && defaultChoice != nil {
 			return defaultChoice.Value, nil
