@@ -23,25 +23,29 @@ type Prompter struct {
 	In     io.Reader
 	Out    io.Writer // usually os.Stderr for interactive prompts
 	reader *bufio.Reader
+	src    io.Reader
 }
 
 func NewPrompter(name string) *Prompter {
 	return &Prompter{
-		Name:   name,
-		In:     os.Stdin,
-		Out:    os.Stderr,
-		reader: bufio.NewReader(os.Stdin),
+		Name: name,
+		In:   os.Stdin,
+		Out:  os.Stderr,
+		// reader is created lazily by getReader()
 	}
 }
 
 func (p *Prompter) getReader() *bufio.Reader {
-	if p.reader == nil {
-		in := p.In
-		if in == nil {
-			in = os.Stdin
-		}
-		p.reader = bufio.NewReader(in)
+	in := p.In
+	if in == nil {
+		in = os.Stdin
 	}
+
+	if p.reader == nil || p.src != in {
+		p.reader = bufio.NewReader(in)
+		p.src = in
+	}
+
 	return p.reader
 }
 
