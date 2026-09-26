@@ -3,22 +3,26 @@
 // (FSL-1.1-ALv2) that can be found in the LICENSE file.
 package lpcli
 
+// Import packages
 import (
-	"bufio"
-	"context"
-	"errors"
-	"fmt"
-	"io"
-	"os"
-	"strings"
+	"bufio"   // bufio
+	"context" // context
+	"errors"  // errors
+	"fmt"     // fmt
+	"io"      // io
+	"os"      // os
+	"strings" // strings
 
-	"github.com/thorsphere/tserr"
+	"github.com/thorsphere/tserr" // tserr
 )
 
+// Temporary file pattern
 const (
 	tmpFilePattern = "lpcli-edit-*.txt"
 )
 
+// Prompter is a prompter for the lpcli package. It provides a
+// convenient way to prompt the user for input, and to confirm actions.
 type Prompter struct {
 	Name   string // Name of the cli tool
 	in     io.Reader
@@ -34,25 +38,36 @@ type Prompter struct {
 	editorStderr io.Writer
 }
 
+// NewPrompter creates a new prompter. Its input and output are set
+// to os.Stdin and os.Stderr, respectively.
 func NewPrompter(name string) *Prompter {
+	// Create a new prompter
 	return &Prompter{
-		Name: name,
-		in:   os.Stdin,
-		out:  os.Stderr,
+		Name: name,      // Set the name
+		in:   os.Stdin,  // Set the input to os.Stdin
+		out:  os.Stderr, // Set the output to os.Stderr
 	}
 }
 
+// getReader returns the cached reader, or creates a new one if
+// necessary. The reader is cached to avoid creating a new one for
+// every call to readLine.
 func (p *Prompter) getReader() *bufio.Reader {
+	// Get the input
 	in := p.in
+	// If the input is not set, use os.Stdin
 	if in == nil {
 		in = os.Stdin
 	}
+	// If the reader is not set, create a new one
 	if p.reader == nil {
 		p.reader = bufio.NewReader(in)
 	}
+	// Return the reader
 	return p.reader
 }
 
+// In returns the input source.
 func (p *Prompter) In() io.Reader { return p.in }
 
 // SetIn changes the input source and discards any buffered reader, so
@@ -85,26 +100,29 @@ func (p *Prompter) Confirm(ctx context.Context, message string) error {
 	if p == nil {
 		return tserr.NilPtr()
 	}
-
+	// Iterate over the prompts
 	for {
 		// Check if context was cancelled
 		if err := ctx.Err(); err != nil {
 			// Prompt was cancelled by context, return an error
 			return tserr.Aborted(p.Name)
 		}
-
+		// Print the message
 		fmt.Fprint(p.Out(), message)
+		// Read a line of input
 		choice, err := p.readLine()
+		// Check if an error occurred
 		if err != nil {
-			return err
+			// If an error occurred, return it
+			return tserr.Op(&tserr.OpArgs{Op: "readLine", Fn: "prompter", Err: err})
 		}
-
+		// Handle the choice
 		switch strings.ToLower(choice) {
-		case "y", "yes", "":
+		case "y", "yes", "": // Yes, or empty input (default)
 			return nil
-		case "n", "no":
+		case "n", "no": // No
 			return tserr.Aborted(p.Name)
-		default:
+		default: // Unknown option
 			fmt.Fprintf(p.Out(), "Unknown option %q. Please choose [y/n].\n", choice)
 		}
 	}
