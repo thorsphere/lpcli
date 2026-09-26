@@ -3,6 +3,13 @@
 // (FSL-1.1-ALv2) that can be found in the LICENSE file.
 package lpcli
 
+// Exported functions for tests
+var (
+	GetReader        = (*Prompter).getReader
+	SetEditorStreams = (*Prompter).setEditorStreams
+	EditorStreams    = (*Prompter).editorStreams
+)
+
 // ReadLine exports readLine for tests. Only compiled during go test.
 func (p *Prompter) ReadLine() (string, error) {
 	return p.readLine()
