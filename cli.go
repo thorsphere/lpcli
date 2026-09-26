@@ -111,15 +111,22 @@ func (p *Prompter) Confirm(ctx context.Context, message string) error {
 }
 
 // readLine reads a line of input, handling non-newline-terminated EOF cleanly.
+// Returns the trimmed input, or an error if the reader is nil or an
+// error occurred.
 func (p *Prompter) readLine() (string, error) {
+	// Get the cached reader
 	reader := p.getReader()
+	// If the reader is nil, return an error
 	if reader == nil {
 		return "", tserr.NilParam("reader")
 	}
-
+	// Read a line of input
 	input, err := reader.ReadString('\n')
+	// If an error occurred, handle it
 	if err != nil {
+		// If the error is EOF, check if the input was terminated
 		if errors.Is(err, io.EOF) {
+			// Trim whitespace from the input
 			trimmed := strings.TrimSpace(input)
 			// If user provided input before EOF, process it
 			if trimmed != "" {
@@ -128,9 +135,10 @@ func (p *Prompter) readLine() (string, error) {
 			// If EOF was reached without input, abort cleanly
 			return "", tserr.Aborted(p.Name)
 		}
+		// Propagate the error
 		return "", err
 	}
-
+	// Trim whitespace from the input and return nil, to indicate success
 	return strings.TrimSpace(input), nil
 }
 
@@ -145,18 +153,27 @@ func (p *Prompter) setEditorStreams(stdin io.Reader, stdout, stderr io.Writer) {
 
 // editorStreams returns the streams to attach to the editor subprocess,
 // falling back to the process's standard streams when unset.
+// Returns the streams, or the process's standard streams if the fields
+// are not set.
 func (p *Prompter) editorStreams() (io.Reader, io.Writer, io.Writer) {
+	// If the editorStdin field is not set, use the process's stdin
 	stdin := io.Reader(os.Stdin)
+	// If the editorStdin field is set, use it
 	if p.editorStdin != nil {
 		stdin = p.editorStdin
 	}
+	// If the editorStdout field is not set, use the process's stdout
 	stdout := io.Writer(os.Stdout)
+	// If the editorStdout field is set, use it
 	if p.editorStdout != nil {
 		stdout = p.editorStdout
 	}
+	// If the editorStderr field is not set, use the process's stderr
 	stderr := io.Writer(os.Stderr)
+	// If the editorStderr field is set, use it
 	if p.editorStderr != nil {
 		stderr = p.editorStderr
 	}
+	// Return the streams
 	return stdin, stdout, stderr
 }
