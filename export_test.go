@@ -8,6 +8,9 @@ var (
 	GetReader        = (*Prompter).getReader
 	SetEditorStreams = (*Prompter).setEditorStreams
 	EditorStreams    = (*Prompter).editorStreams
+	Validate         = SelectOptions.validate
+	Matches          = Choice.matches
+	PromptParts      = SelectOptions.promptParts
 )
 
 // ReadLine exports readLine for tests. Only compiled during go test.
