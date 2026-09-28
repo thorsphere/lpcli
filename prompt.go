@@ -180,40 +180,51 @@ func (opts SelectOptions) validate() (*Choice, error) {
 // interactively. Returns the selected choice's Value. Returns an error
 // if ctx is cancelled.
 func (p *Prompter) Prompt(ctx context.Context, opts SelectOptions) (string, error) {
+	// Check if the prompter is nil
 	if p == nil {
+		// If the prompter is nil, return an error
 		return "", tserr.NilPtr()
 	}
-
+	// Validate the options and get the default choice
 	defaultChoice, err := opts.validate()
+	// Check if validation failed
 	if err != nil {
+		// If validation failed, return the error
 		return "", err
 	}
-
+	// Render the prompt message and get the display keys
 	promptMsg, keyParts := opts.promptParts()
-
+	// Retry until the user provides a valid answer
 	for {
 		// Check if context was cancelled
 		if err := ctx.Err(); err != nil {
 			// Prompt was cancelled by context, return an error
 			return "", tserr.Aborted(p.Name)
 		}
-
+		// Print the prompt message
 		fmt.Fprint(p.Out(), promptMsg)
+		// Read the user input
 		trimmed, err := p.readLine()
+		// Check if reading the user input failed
 		if err != nil {
+			// If reading the user input failed, return the error
 			return "", tserr.Op(&tserr.OpArgs{Op: "readLine", Fn: "prompter", Err: err})
 		}
-
+		// Check if the user input is empty and the default choice is configured
 		if trimmed == "" && defaultChoice != nil {
+			// If the user input is empty and the default choice is configured,
+			// return the default choice's value
 			return defaultChoice.Value, nil
 		}
-
+		// Iterate over the choices
 		for _, c := range opts.Choices {
+			// Check if the user input matches the choice
 			if c.matches(trimmed) {
+				// If the user input matches the choice, return the choice's value
 				return c.Value, nil
 			}
 		}
-
+		// Print the retry message
 		fmt.Fprintf(p.Out(), "Unknown option %q. Please choose [%s].\n", trimmed, strings.Join(keyParts, "/"))
 	}
 }
