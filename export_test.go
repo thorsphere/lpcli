@@ -11,6 +11,10 @@ var (
 	Validate         = SelectOptions.validate
 	Matches          = Choice.matches
 	PromptParts      = SelectOptions.promptParts
+	SplitEditorCmd   = splitEditorCmd
+	GetEditor        = getEditor
+	EditorsWindows   = editorsWindows
+	EditorsUnix      = editorsUnix
 )
 
 // ReadLine exports readLine for tests. Only compiled during go test.
