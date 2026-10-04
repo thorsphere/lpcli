@@ -63,6 +63,20 @@
 // than the prompter's, because editors need a real terminal to render their
 // interface.
 //
+// Edit returns the file's contents verbatim and does not treat an
+// empty result as an error: a user who deletes everything and saves
+// gets an empty string and a nil error. Callers that require content
+// must check for it, and should compare against the initial text if
+// they also want to detect "closed without editing":
+//
+//	content, err := p.Edit(ctx, draft)
+//	if err != nil {
+//	    return err
+//	}
+//	if strings.TrimSpace(content) == "" || content == draft {
+//	    return tserr.Empty("commit message")
+//	}
+//
 // # Cancellation
 //
 // Every prompt takes a context.Context and returns tserr.Aborted once it is

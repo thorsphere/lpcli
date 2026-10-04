@@ -145,6 +145,7 @@ func main() {
 - **Cancellation discards editor changes**: when `ctx` is cancelled, the editor process is killed and its unsaved changes are lost; the temporary file is still cleaned up.
 - **Confirm defaults to "yes"**: pressing Enter confirms. Callers guarding destructive actions should use `Prompt` and require an explicit key instead.
 - **An editor must be available**: `Edit` returns an error if no usable editor is found via `VISUAL`, `EDITOR`, or the built-in fallbacks.
+- **An empty edit is not an error**: `Edit` returns the file's contents verbatim, so a user who deletes everything and saves gets `""` and a `nil` error. Callers that require content must check for it — `strings.TrimSpace(content) == ""` is usually what you want, since editors leave a trailing newline. Compare against the initial text as well if you need to detect "closed without editing".
 
 ---
 

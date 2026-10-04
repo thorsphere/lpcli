@@ -492,6 +492,19 @@ func TestEdit(t *testing.T) {
 			initial: "line one\nline two\n",
 			want:    "line one\nline two\n",
 		},
+		{ // editor empties the file: empty result is not an error
+			name:    "editor empties the file",
+			mode:    "truncate",
+			initial: "hello",
+			want:    "",
+		},
+		{ // editor leaves only whitespace
+			name:    "editor leaves only whitespace",
+			mode:    "write",
+			text:    "\n\n",
+			initial: "hello",
+			want:    "\n\n",
+		},
 	}
 	// Iterate over the tests
 	for _, tt := range tests {
@@ -755,5 +768,33 @@ func TestEditEditorFailsToStart(t *testing.T) {
 	if strings.Contains(err.Error(), "exit status") {
 		// If the error is an exit status, fail
 		t.Error(tserr.EqualStr(&tserr.EqualStrArgs{Var: "Edit() error", Want: "start failure", Actual: err.Error()}))
+	}
+}
+
+// TestEditEmptyResultIsNotAnError pins the documented contract: a
+// user who deletes the whole buffer and saves gets an empty string
+// and a nil error. Callers that require content must check for it
+// themselves, so this test fails loudly if Edit ever starts
+// rejecting empty results.
+func TestEditEmptyResultIsNotAnError(t *testing.T) {
+	// Point VISUAL at the fake editor
+	t.Setenv("VISUAL", helperEditorCmd())
+	// Spawn the helper behavior
+	t.Setenv(helperGate, "1")
+	// Make the helper empty the file
+	t.Setenv(helperMode, "truncate")
+	// Create a prompter
+	p := lpcli.NewPrompter("lpcli")
+	// Edit the text
+	got, err := p.Edit(context.Background(), "hello")
+	// Check that the edit is an error
+	if err != nil {
+		// If the edit is an error, fail
+		t.Fatal(tserr.Op(&tserr.OpArgs{Op: "Edit()", Fn: "prompter", Err: err}))
+	}
+	// Check that the result is empty
+	if got != "" {
+		// If the result is not empty, fail
+		t.Error(tserr.EqualStr(&tserr.EqualStrArgs{Var: "Edit()", Want: "", Actual: got}))
 	}
 }

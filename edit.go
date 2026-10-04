@@ -31,6 +31,10 @@ var (
 // The editor subprocess is attached to the process's standard
 // streams (os.Stdin/Stdout/Stderr), not the prompter's In/Out,
 // because editors require a real terminal to render their UI.
+// The result is the file's contents verbatim: if the user deletes
+// everything, Edit returns an empty string and a nil error. Callers
+// that require content must check for it themselves, typically with
+// strings.TrimSpace, since editors usually leave a trailing newline.
 func (p *Prompter) Edit(ctx context.Context, initialText string) (string, error) {
 	// If the prompter is nil, return an error
 	if p == nil {

@@ -132,6 +132,20 @@ func TestHelperEditor(t *testing.T) {
 		}
 		// Close the file
 		f.Close()
+	case "truncate": // empty the file, as a user deleting everything would
+		// Truncate the file to zero length
+		if err := os.Truncate(path, 0); err != nil {
+			// Exit if the file cannot be truncated
+			fmt.Fprintln(os.Stderr, tserr.Op(&tserr.OpArgs{Op: "truncate temp file", Fn: path, Err: err}))
+			os.Exit(2)
+		}
+	case "write": // replace the contents, e.g. with whitespace only
+		// Write the text over the file, truncating it first
+		if err := os.WriteFile(path, []byte(os.Getenv(helperText)), 0o600); err != nil {
+			// Exit if the file cannot be written
+			fmt.Fprintln(os.Stderr, tserr.Op(&tserr.OpArgs{Op: "write temp file", Fn: path, Err: err}))
+			os.Exit(2)
+		}
 	case "echo": // write to the attached streams
 		fmt.Fprint(os.Stdout, writeStdout)
 		fmt.Fprint(os.Stderr, writeStderr)
