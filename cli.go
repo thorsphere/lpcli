@@ -1,6 +1,77 @@
 // Copyright (c) 2026 thorsphere.
 // All Rights Reserved. Use is governed by the Functional Source License v1.1
 // (FSL-1.1-ALv2) that can be found in the LICENSE file.
+
+// Package lpcli provides lightweight building blocks for interactive
+// command-line tools: yes/no confirmations, single-choice selection, and
+// inline editing of text in the user's editor.
+//
+// A Prompter is the entry point. Create one with NewPrompter and reuse it
+// for the lifetime of the command:
+//
+//	p := lpcli.NewPrompter("mytool")
+//
+// Prompts read from os.Stdin and write to os.Stderr by default, so they do
+// not interfere with piped program output. Both streams can be replaced
+// with SetIn and SetOut, which makes prompts straightforward to test.
+//
+// # Confirmations
+//
+// Confirm asks a yes/no question. It accepts "y", "yes", "n" and "no",
+// case-insensitively; pressing Enter is treated as "yes". It returns
+// tserr.Aborted when the user answers "no" or when ctx is cancelled:
+//
+//	if err := p.Confirm(ctx, "Stage the changes? [Y/n]: "); err != nil {
+//	    // user said no, or ctx was cancelled
+//	}
+//
+// Because Enter confirms, callers guarding destructive actions should use
+// Prompt and require an explicit key instead.
+//
+// # Choices
+//
+// Prompt asks the user to pick one of several choices and returns the Value
+// of the selected one. Each Choice has a Key (what the user types), optional
+// Aliases, an optional Label shown in the legend, and an optional IsDefault
+// marking the choice selected by pressing Enter:
+//
+//	action, err := p.Prompt(ctx, lpcli.SelectOptions{
+//	    Message: "What would you like to do?",
+//	    Choices: []lpcli.Choice{
+//	        {Value: "apply", Key: "a", Label: "apply changes", IsDefault: true},
+//	        {Value: "plan", Key: "p", Label: "show a plan"},
+//	        {Value: "quit", Key: "q", Label: "quit"},
+//	    },
+//	})
+//
+// Unrecognized input is rejected and the question is asked again. Options
+// are validated before the first prompt: empty, duplicate, or
+// whitespace-padded keys and aliases, and more than one default, all return
+// an error.
+//
+// # Editing
+//
+// Edit writes text to a temporary file, opens it in the user's editor, and
+// returns the edited contents. The editor is taken from the VISUAL
+// environment variable, then EDITOR, then a list of common editors; values
+// may include arguments, as in "code --wait". The temporary file is always
+// removed, including when ctx is cancelled:
+//
+//	content, err := p.Edit(ctx, "draft text")
+//
+// The editor subprocess is attached to the process's standard streams rather
+// than the prompter's, because editors need a real terminal to render their
+// interface.
+//
+// # Cancellation
+//
+// Every prompt takes a context.Context and returns tserr.Aborted once it is
+// cancelled. Confirm and Prompt check the context before each read, so a
+// cancellation is observed when the next line of input arrives; Edit kills
+// the editor subprocess immediately.
+//
+// Windows is supported on a best-effort basis: the package is
+// compile-checked but not regularly tested there.
 package lpcli
 
 // Import packages
