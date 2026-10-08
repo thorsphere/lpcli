@@ -562,6 +562,11 @@ func TestOut(t *testing.T) {
 			p:    &lpcli.Prompter{Name: pn},
 			want: os.Stderr,
 		},
+		{ // nil prompter falls back to os.Stderr, like the zero value
+			name: "nil prompter returns os.Stderr",
+			p:    nil,
+			want: os.Stderr,
+		},
 	}
 	// Iterate over the tests
 	for _, tt := range tests {
@@ -708,5 +713,54 @@ func TestEditorStreamsNilRestoresAfterOverride(t *testing.T) {
 	if stderr != os.Stderr {
 		// If stderr is not restored, fail
 		t.Error(tserr.EqualStr(&tserr.EqualStrArgs{Var: "editorStreams() stderr", Want: fmt.Sprintf("%v", os.Stderr), Actual: fmt.Sprintf("%v", stderr)}))
+	}
+}
+
+// TestInNil verifies that In returns nil for a nil prompter.
+func TestInNil(t *testing.T) {
+	// Create a nil prompter
+	var p *lpcli.Prompter
+	// Check that In returns nil for a nil prompter
+	got := p.In()
+	// Check that the input source is nil
+	if got != nil {
+		// If the input source is not nil, fail
+		t.Error(tserr.NilExpected(&tserr.NilExpectedArgs{Op: "In()", Err: fmt.Errorf("%v", got)}))
+	}
+}
+
+// TestSetInNil verifies that SetIn returns an error for a nil prompter.
+func TestSetInNil(t *testing.T) {
+	// Create a nil prompter
+	var p *lpcli.Prompter
+	// Set the input on the nil prompter
+	err := p.SetIn(nil)
+	// Check that SetIn returns an error
+	if err == nil {
+		// If the error is nil, fail
+		t.Fatal(tserr.NilFailed("SetIn()"))
+	}
+	// Check that the error is the nil pointer error
+	if err.Error() != tserr.NilPtr().Error() {
+		// If the error is not as expected, fail
+		t.Error(tserr.EqualStr(&tserr.EqualStrArgs{Var: "SetIn() error", Want: tserr.NilPtr().Error(), Actual: err.Error()}))
+	}
+}
+
+// TestSetOutNil verifies that SetOut returns an error for a nil prompter.
+func TestSetOutNil(t *testing.T) {
+	// Create a nil prompter
+	var p *lpcli.Prompter
+	// Set the output on the nil prompter
+	err := p.SetOut(nil)
+	// Check that SetOut returns an error
+	if err == nil {
+		// If the error is nil, fail
+		t.Fatal(tserr.NilFailed("SetOut()"))
+	}
+	// Check that the error is the nil pointer error
+	if err.Error() != tserr.NilPtr().Error() {
+		// If the error is not as expected, fail
+		t.Error(tserr.EqualStr(&tserr.EqualStrArgs{Var: "SetOut() error", Want: tserr.NilPtr().Error(), Actual: err.Error()}))
 	}
 }

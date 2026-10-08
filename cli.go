@@ -153,27 +153,66 @@ func (p *Prompter) getReader() *bufio.Reader {
 }
 
 // In returns the input source.
-func (p *Prompter) In() io.Reader { return p.in }
-
-// SetIn changes the input source and discards any buffered reader, so
-// subsequent reads come from r. Prefer this over assigning In directly once
-// the prompter has been used, since a cached reader would otherwise keep
-// reading from the previous source. Passing nil restores os.Stdin.
-func (p *Prompter) SetIn(r io.Reader) {
-	p.in = r
-	p.reader = nil
+func (p *Prompter) In() io.Reader {
+	// Check if the prompter is nil
+	if p == nil {
+		// If the prompter is nil, return nil
+		return nil
+	}
+	// Return the input source
+	return p.in
 }
 
+// SetIn changes the input source and discards any buffered reader, so
+// subsequent reads come from r. Use this rather than assigning p.in
+// directly once the prompter has been used, since a cached reader would
+// otherwise keep reading from the previous source. Passing nil unsets the
+// source: In then reports nil, and reads fall back to os.Stdin at read
+// time. Returns tserr.NilPtr() without changing anything if p is nil.
+func (p *Prompter) SetIn(r io.Reader) error {
+	// If the prompter is nil, return an error
+	if p == nil {
+		return tserr.NilPtr()
+	}
+	// Set the input source
+	p.in = r
+	// Discard the cached reader so the next read comes from the new source
+	p.reader = nil
+	// Return nil, to indicate success
+	return nil
+}
+
+// Out returns the writer used for prompt output, falling back to
+// os.Stderr when unset. Unlike In, Out applies the fallback itself,
+// because it is used directly for writing and must always return a
+// usable writer; a nil Prompter likewise yields os.Stderr.
 func (p *Prompter) Out() io.Writer {
+	// Check if the prompter is nil
+	if p == nil {
+		// If the prompter is nil, use os.Stderr
+		return os.Stderr
+	}
+	// If the output is not set, use os.Stderr
 	if p.out == nil {
 		return os.Stderr
 	}
+	// Return the output writer
 	return p.out
 }
 
 // SetOut changes the writer used for prompt output. Passing nil restores
-// os.Stderr.
-func (p *Prompter) SetOut(w io.Writer) { p.out = w }
+// the default os.Stderr fallback, which Out applies itself. Returns
+// tserr.NilPtr() without changing anything if p is nil.
+func (p *Prompter) SetOut(w io.Writer) error {
+	// If the prompter is nil, return an error
+	if p == nil {
+		return tserr.NilPtr()
+	}
+	// Set the output writer
+	p.out = w
+	// Return nil, to indicate success
+	return nil
+}
 
 // Confirm prompts the user for a yes/no confirmation. Pressing Enter
 // (empty input) is treated as "yes", matching the low-stakes nature of
